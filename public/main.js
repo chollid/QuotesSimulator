@@ -1,41 +1,54 @@
-const update = document.querySelector('#update-button')
+const deleteText = document.querySelectorAll('.fa-trash')
+const thumbText = document.querySelectorAll('.fa-thumbs-up')
 
-const deleteButton = document.querySelector('#delete-button')
-
-update.addEventListener('click', _ => {
-    //=====================
-    // Put Request / Fetch(only way to trigger PUT in browser)
-    //=====================
-    // fetch(endpoint, options) -- endpoint = /quotes in database
-    //=============================
-    fetch('/quotes', {
-        method: 'put',  // The type of DB request 
-        headers: { 'Content-Type': 'application/json' },  //Tells server we are sender JSON
-        body: JSON.stringify({
-            name: 'Steve Jobs',
-            quote: 'Everyone should learn how to program because it teaches you how to think.'
-        })
-    })
-    .then(res => {
-        if (res.ok) return res.json()
-    })
-    .then(response => {
-        console.log(response)
-    })
+Array.from(deleteText).forEach((element)=>{
+    element.addEventListener('click', deleteRapper)
 })
 
-deleteButton.addEventListener('click', _ => {
-    fetch('/quotes', {
-        method: 'delete', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            name: 'Steve Jobs'
-        })
-    })
-    .then(res => {
-        if (res.ok) return res.json()
-    })
-    .then(data => {
-        window.location.reload()
-    })
+Array.from(thumbText).forEach((element)=>{
+    element.addEventListener('click', addLike)
 })
+
+async function deleteRapper(){
+    const sName = this.parentNode.childNodes[1].innerText
+    const bName = this.parentNode.childNodes[3].innerText
+    try{
+        const response = await fetch('deleteRapper', {
+            method: 'delete',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              'stageNameS': sName,
+              'birthNameS': bName
+            })
+          })
+        const data = await response.json()
+        console.log(data)
+        location.reload()
+
+    }catch(err){
+        console.log(err)
+    }
+}
+
+async function addLike(){
+    const sName = this.parentNode.childNodes[1].innerText
+    const bName = this.parentNode.childNodes[3].innerText
+    const tLikes = Number(this.parentNode.childNodes[5].innerText)
+    try{
+        const response = await fetch('addOneLike', {
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              'stageNameS': sName,
+              'birthNameS': bName,
+              'likesS': tLikes
+            })
+          })
+        const data = await response.json()
+        console.log(data)
+        location.reload()
+
+    }catch(err){
+        console.log(err)
+    }
+}

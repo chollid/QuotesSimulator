@@ -1,85 +1,71 @@
 const express = require('express')
-const bodyParser = require('body-parser')
-const MongoClient = require('mongodb').MongoClient
 const app = express()
+const MongoClient = require('mongodb').MongoClient
+const PORT = 2121
+require('dotenv').config()
 
 
-//Update environment variables
-// require('./dotenv')
+let db,
+    dbConnectionStr = process.env.DB_STRING,
+    dbName = 'rap'
 
-const connectionString = 'mongodb+srv://chollid:chollid@cluster0.v6enn.mongodb.net/QuoteSimulator?retryWrites=true&w=majority'
-
-
-
-
-MongoClient.connect(connectionString, { useUnifiedTopology: true })
-.then(client=> {
-    console.log("Connected to Database")
-    const db = client.db('quotes-simulator')
-    const quotesCollection = db.collection('quotes')
-
-
-    //===============================
-    // Middlewares
-    //==============================
-    app.set('view engine', 'ejs')
-    app.use(bodyParser.urlencoded({ extended: true}))
-    app.use(bodyParser.json()) // Teaches server to accept JSON
-    app.use(express.static('public'))
-    // app.use(express.json())
-
-
-    //===============================
-    // Routes
-    //===============================
-
-    // My GET function - sends html to browser
-    app.get('/', (req, res) => {
-        db.collection('quotes').find().toArray()
-        .then(quotes => {
-            // Pass quotes into the Express' render method
-            res.render('index.ejs', { quotes: quotes })
-        })
-        .catch(error => console.log(error))
-        // res.sendFile(__dirname + '/index.html')
-        // res.render('index.ejs', {})
-        // res.render(views, local)
+MongoClient.connect(dbConnectionStr, { useUnifiedTopology: true })
+    .then(client => {
+        console.log(`Connected to ${dbName} Database`)
+        db = client.db(dbName)
     })
+    
+app.set('view engine', 'ejs')
+app.use(express.static('public'))
+app.use(express.urlencoded({ extended: true }))
+app.use(express.json())
 
-    // My POST function - posts data to DB
-    app.post('/quotes', (req, res) => {
-        quotesCollection.insertOne(req.body)
-        .then(result => {
-            res.redirect('/')
-        })
-        .catch(error => console.error(error))
-    })
 
-    app.put('/quotes', (req, res) => {
-        // console.log(req.body)
-        quotesCollection.findOneAndUpdate(
-            { name: 'Steve Jobs' },
-            {
-                $set: {
-                    name: req.body.name,
-                    quote: req.body.quote
-                },
-            },
-            {
-                upsert: true
-            }
-        )
-        .then(result => {
-            res.json('Success')
-        })
-        .catch(error => console.error(error))
+app.get('/',(request, response)=>{
+    db.collection('rappers').find().sort({likes: -1}).toArray()
+    .then(data => {
+        response.render('index.ejs', { info: data })
     })
-
-    //==============================
-    // Listen
-    //=============================
-    app.listen(3000, function() {
-        console.log("listening on 3000")
-    })
+    .catch(error => console.error(error))
 })
-.catch(error => console.log(error))
+
+app.post('/addRapper', (request, response) => {
+    db.collection('rappers').insertOne({stageName: request.body.stageName,
+    birthName: request.body.birthName, likes: 0})
+    .then(result => {
+        console.log('Rapper Added')
+        response.redirect('/')
+    })
+    .catch(error => console.error(error))
+})
+
+app.put('/addOneLike', (request, response) => {
+    db.collection('rappers').updateOne({stageName: request.body.stageNameS, birthName: request.body.birthNameS,likes: request.body.likesS},{
+        $set: {
+            likes:request.body.likesS + 1
+          }
+    },{
+        sort: {_id: -1},
+        upsert: true
+    })
+    .then(result => {
+        console.log('Added One Like')
+        response.json('Like Added')
+    })
+    .catch(error => console.error(error))
+
+})
+
+app.delete('/deleteRapper', (request, response) => {
+    db.collection('rappers').deleteOne({stageName: request.body.stageNameS})
+    .then(result => {
+        console.log('Rapper Deleted')
+        response.json('Rapper Deleted')
+    })
+    .catch(error => console.error(error))
+
+})
+
+app.listen(process.env.PORT || PORT, ()=>{
+    console.log(`Server running on port ${PORT}`)
+})
